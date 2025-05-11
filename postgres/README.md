@@ -1,4 +1,4 @@
-# 🕸️ Playwright MCP + OpenAI Browser Agent
+# 🕸️ Mastra + LLM + Postgres MCP デモアプリ
 
 このプロジェクトは、[Mastra](https://github.com/mastra-ai/mastra) と [Postgres MCP](https://github.com/modelcontextprotocol/servers/tree/main/src/postgres)　を使って、LLM と組み合わせることで、Postgres の DB に SQL クエリを飛ばして結果を取得することができるようになる TypeScript スクリプトのサンプルです。
 
