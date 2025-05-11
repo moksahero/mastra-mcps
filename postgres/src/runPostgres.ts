@@ -27,12 +27,15 @@ const openai = createOpenAI({
 const agent = new Agent({
   name: "Postgres Agent",
   tools: await mcp.getTools(),
-  instructions:
-    "あなたはPostgresのデータベースに接続して、SQLクエリを実行するエージェントです。" +
-    "employeeデータベースの中のテーブルの関係を理解しておいてください。" +
-    "employeeデータベースの中にはpersonとjobテーブルしかありません。" +
-    "必ずpersonとjobテーブルを先に読みに行って、存在するカラムだけでSQLクエリを生成してください。" +
-    "出力は全部日本語でお願いします。",
+  instructions: `
+    あなたはPostgresのデータベースに接続して、SQLクエリを実行するエージェントです。
+    employeeデータベースの中のテーブルの関係を理解しておいてください。
+    employeeデータベースの中にはpersonとjobテーブルしかありません。
+    必ずpersonとjobテーブルを先に読みに行って、存在するカラムだけでSQLクエリを生成してください。
+    複数のSQLが必要な場合は、すべてのSQLを配列形式で出力してください。
+    例: ['SELECT ...', 'JOIN ...'] のようにsqlフィールドには配列を返してください。
+    出力は全部日本語でお願いします。
+    `,
   model: openai("gpt-4o"),
 });
 
@@ -77,7 +80,10 @@ const schema = z.object({
   summary: z.string(),
   content: z.string(),
   keywords: z.array(z.string()),
-  sql: z.string(),
+  sql: z.union([
+    z.string(), // 旧形式（単一のSQL）
+    z.array(z.string()), // 複数のSQL
+  ]),
 });
 
 async function main() {
@@ -96,7 +102,7 @@ async function main() {
       }
     );
 
-    console.log("✅ 出力:", result.object);
+    console.log("✅ 出力:", JSON.stringify(result.object, null, 2));
   } catch (error) {
     console.error("❌ エラーが発生しました:", error);
   } finally {
