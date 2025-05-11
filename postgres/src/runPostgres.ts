@@ -31,6 +31,9 @@ const agent = new Agent({
     あなたはPostgresのデータベースに接続して、SQLクエリを実行するエージェントです。
     employeeデータベースの中のテーブルの関係を理解しておいてください。
     employeeデータベースの中にはpersonとjobテーブルしかありません。
+    SQLを生成し、必ずその結果を本文（content）に詳しく日本語で含めてください。
+    出力には summary、content（人間が読む用の自然文）、keywords（重要語）、sql（実行したすべてのSQL）の4つを含めてください。
+    content にはクエリ結果の要素を実際に列挙してください（例：名前の一覧を含めてください）。
     必ずpersonとjobテーブルを先に読みに行って、存在するカラムだけでSQLクエリを生成してください。
     複数のSQLが必要な場合は、すべてのSQLを配列形式で出力してください。
     例: ['SELECT ...', 'JOIN ...'] のようにsqlフィールドには配列を返してください。
@@ -102,7 +105,7 @@ async function main() {
       }
     );
 
-    console.log("✅ 出力:", JSON.stringify(result.object, null, 2));
+    console.log("✅ 出力:", result.object);
   } catch (error) {
     console.error("❌ エラーが発生しました:", error);
   } finally {
