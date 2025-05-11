@@ -1,0 +1,108 @@
+import { createOpenAI } from "@ai-sdk/openai";
+import { Agent } from "@mastra/core/agent";
+import dotenv from "dotenv";
+import { MCPClient } from "@mastra/mcp";
+import readline from "readline";
+import { z } from "zod";
+dotenv.config();
+
+// MCPの設定
+export const mcp = new MCPClient({
+  servers: {
+    postgres: {
+      command: "npx",
+      args: [
+        "-y",
+        "@modelcontextprotocol/server-postgres",
+        "postgres://postgres:postgres@localhost:5432/employee",
+      ],
+    },
+  },
+});
+
+const openai = createOpenAI({
+  apiKey: process.env.OPENAI_API_KEY, // 環境変数からAPIキーを取得
+});
+
+const agent = new Agent({
+  name: "Postgres Agent",
+  tools: await mcp.getTools(),
+  instructions:
+    "あなたはPostgresのデータベースに接続して、SQLクエリを実行するエージェントです。" +
+    "employeeデータベースの中のテーブルの関係を理解しておいてください。" +
+    "employeeデータベースの中にはpersonとjobテーブルしかありません。" +
+    "必ずpersonとjobテーブルを先に読みに行って、存在するカラムだけでSQLクエリを生成してください。" +
+    "出力は全部日本語でお願いします。",
+  model: openai("gpt-4o"),
+});
+
+// 1行入力でプロンプトを受け取る
+async function readPrompt(): Promise<string> {
+  return new Promise((resolve) => {
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout,
+    });
+
+    rl.question("📥 プロンプトを入力してください:> ", (input) => {
+      rl.close();
+      resolve(input);
+    });
+  });
+}
+
+async function readMultiLinePrompt(): Promise<string> {
+  return new Promise((resolve) => {
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout,
+    });
+
+    console.log("📥 プロンプトを入力してください（空行で終了）:");
+
+    const lines: string[] = [];
+
+    rl.on("line", (line) => {
+      if (line.trim() === "") {
+        rl.close();
+        resolve(lines.join("\n"));
+      } else {
+        lines.push(line);
+      }
+    });
+  });
+}
+
+const schema = z.object({
+  summary: z.string(),
+  content: z.string(),
+  keywords: z.array(z.string()),
+  sql: z.string(),
+});
+
+async function main() {
+  const prompt = await readPrompt();
+
+  try {
+    const result = await agent.generate(
+      [
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+      {
+        experimental_output: schema,
+      }
+    );
+
+    console.log("✅ 出力:", result.object);
+  } catch (error) {
+    console.error("❌ エラーが発生しました:", error);
+  } finally {
+    // 接続を明示的に終了
+    await mcp.disconnect();
+  }
+}
+
+main();
